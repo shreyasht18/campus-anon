@@ -12,11 +12,12 @@ interface Props {
   post: Post;
   myVote: number;
   meId: string | null;
+  isAdmin?: boolean;
   onVote: (post: Post, value: 1 | -1) => void;
   onDelete: (post: Post) => void;
 }
 
-export default function PostCard({ post, myVote, meId, onVote, onDelete }: Props) {
+export default function PostCard({ post, myVote, meId, isAdmin, onVote, onDelete }: Props) {
   const [copied, setCopied] = useState(false);
   const isMine = !!meId && post.user_id === meId;
   const comments = post.comment_count || 0;
@@ -85,14 +86,16 @@ export default function PostCard({ post, myVote, meId, onVote, onDelete }: Props
           {copied ? "Copied" : "Share"}
         </button>
 
-        {isMine && (
+        {/* Delete button is now visible if it is your post OR if you are the admin */}
+        {(isMine || isAdmin) && (
           <button
             type="button"
             onClick={() => onDelete(post)}
             aria-label="Delete post"
-            className="ml-auto rounded-full p-2 text-gray-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+            className="ml-auto flex items-center gap-1.5 rounded-full p-2 text-gray-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" /> 
+            {isAdmin && !isMine && <span className="text-xs font-bold pr-1">Admin Delete</span>}
           </button>
         )}
       </div>

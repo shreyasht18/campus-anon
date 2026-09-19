@@ -52,6 +52,10 @@ export default function FeedPage() {
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Set your master admin username here
+  const ADMIN_USERNAME = "Ambit_Admin_99"; 
+  const isAdmin = me?.username === ADMIN_USERNAME;
+
   const loadFeed = async () => {
     const { data, error } = await supabase
       .from("posts")
@@ -100,7 +104,6 @@ export default function FeedPage() {
     const next = current === value ? 0 : value;
     const delta = next - current;
 
-    // Update the screen instantly, then save. Posts re-sort right away.
     setMyVotes((v) => ({ ...v, [post.id]: next }));
     setPosts((ps) =>
       ps.map((p) => (p.id === post.id ? { ...p, upvotes: (p.upvotes || 0) + delta } : p))
@@ -365,6 +368,7 @@ export default function FeedPage() {
                 post={post}
                 myVote={myVotes[post.id] || 0}
                 meId={me?.id || null}
+                isAdmin={isAdmin} 
                 onVote={handleVote}
                 onDelete={handleDelete}
               />
