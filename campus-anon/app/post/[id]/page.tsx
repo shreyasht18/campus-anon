@@ -22,28 +22,27 @@ export default function PostPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Safety check to make sure the URL is a real ID
     if (!isUuid(postId)) {
       setLoading(false);
       return;
     }
 
     async function fetchEverything() {
-      // 2. TRIGGER THE VIEW COUNTER INSTANTLY!
+      // 1. Trigger the view counter
       try {
         await supabase.rpc('increment_view', { post_id: postId });
       } catch (error) {
         console.error("View count error:", error);
       }
 
-      // 3. Get Logged In User
+      // 2. Get Logged In User
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setMeId(session.user.id);
-        setIsAdmin(session.user.email === 'admin@ambit.edu'); // Change to your admin email if needed
+        setIsAdmin(session.user.email === 'admin@ambit.edu');
       }
 
-      // 4. Fetch the Post
+      // 3. Fetch the Post
       const { data: postData } = await supabase
         .from("posts")
         .select("*")
@@ -53,10 +52,10 @@ export default function PostPage({ params }: { params: { id: string } }) {
       if (postData) {
         setPost(postData);
         
-        // 5. Fetch Your Vote Status
+        // 4. Fetch Your Vote Status (FIXED to use "post_votes")
         if (session) {
           const { data: voteData } = await supabase
-            .from("votes")
+            .from("post_votes")
             .select("value")
             .eq("post_id", postId)
             .eq("user_id", session.user.id)
@@ -65,7 +64,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
         }
       }
 
-      // 6. Fetch Comments
+      // 5. Fetch Comments
       const { data: commentsData } = await supabase
         .from("comments")
         .select("*")
@@ -80,27 +79,27 @@ export default function PostPage({ params }: { params: { id: string } }) {
     fetchEverything();
   }, [postId]);
 
-  // Handle upvotes/downvotes
+  // FIXED: Now passing all 5 required arguments to castVote
   const handleVote = async (postToVote: Post, value: 1 | -1) => {
     if (!meId) return alert("Log in to vote!");
+    
     const newVal = myVote === value ? 0 : value;
-    setMyVote(newVal);
+    const voteDiff = newVal - myVote;
     
     // Update UI instantly
-    const voteDiff = newVal - myVote;
+    setMyVote(newVal);
     setPost(prev => prev ? { ...prev, upvotes: (prev.upvotes || 0) + voteDiff } : null);
     
-    await castVote(postToVote.id, meId, newVal);
+    // Call the server with all 5 arguments
+    await castVote("post_votes", "post_id", postToVote.id, myVote, value);
   };
 
-  // Handle post deletion
   const handleDelete = async (postToDelete: Post) => {
     if (!confirm("Are you sure you want to delete this post?")) return;
     await supabase.from("posts").delete().eq("id", postToDelete.id);
     window.location.href = "/";
   };
 
-  // Handle adding a new comment
   const submitComment = async () => {
     if (!newComment.trim() || !meId || !post) return;
     
@@ -123,12 +122,10 @@ export default function PostPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6 mb-24">
-      {/* Back Button */}
       <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-indigo-400 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to Feed
       </Link>
 
-      {/* Main Post Card */}
       <PostCard 
         post={post}
         myVote={myVote}
@@ -138,7 +135,6 @@ export default function PostPage({ params }: { params: { id: string } }) {
         onDelete={handleDelete}
       />
 
-      {/* Comments Section */}
       <div className="mt-8 border-t border-white/10 pt-8">
         <h3 className="text-lg font-bold text-gray-200 mb-6">Comments ({comments.length})</h3>
         
@@ -160,7 +156,6 @@ export default function PostPage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {/* Comment Input Box */}
         {meId ? (
           <div className="flex gap-3 items-end">
             <textarea
