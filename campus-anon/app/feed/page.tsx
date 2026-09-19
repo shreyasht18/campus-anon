@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,6 +12,8 @@ import {
   Send,
   TrendingUp,
   ShieldCheck,
+  ImagePlus,
+  X
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -52,8 +54,11 @@ export default function FeedPage() {
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // The new admin username is set to ghostadmin. 
-  // .toLowerCase() means GhostAdmin, GHOSTADMIN, or ghostadmin will all work.
+  // NEW: Image Upload States
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const isAdmin = me?.username?.toLowerCase() === "ghostadmin";
 
   const loadFeed = async () => {
@@ -129,12 +134,56 @@ export default function FeedPage() {
     setPosts((ps) => ps.filter((p) => p.id !== post.id));
   };
 
+  // NEW: Image handlers
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMessage("Image is too large. Please select an image under 5MB.");
+        return;
+      }
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+      setErrorMessage("");
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !me) return;
 
     setSubmitting(true);
     setErrorMessage("");
+    let finalImageUrl = null;
+
+    // NEW: Upload image to storage bucket if one was selected
+    if (imageFile) {
+      const fileExt = imageFile.name.split(".").pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${me.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("post_images")
+        .upload(filePath, imageFile);
+
+      if (uploadError) {
+        setErrorMessage("Failed to upload image. (Check Supabase storage policies!)");
+        setSubmitting(false);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("post_images")
+        .getPublicUrl(filePath);
+        
+      finalImageUrl = publicUrlData.publicUrl;
+    }
 
     const { error } = await supabase.from("posts").insert([
       {
@@ -142,6 +191,7 @@ export default function FeedPage() {
         content: body.trim(),
         flair,
         author_name: me.username,
+        image_url: finalImageUrl, // Save the image link to the database
       },
     ]);
 
@@ -151,6 +201,7 @@ export default function FeedPage() {
       setTitle("");
       setBody("");
       setFlair("Confession");
+      removeImage(); // Clear image preview after successful post
       setComposerOpen(false);
       setSort("new");
       await loadFeed();
@@ -208,7 +259,7 @@ export default function FeedPage() {
               className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-gray-950/60 px-3 py-3 text-left text-sm text-gray-500 transition-colors hover:border-white/20"
             >
               <Avatar name={me?.username || "?"} size={32} />
-              <span className="flex-1">Share a confession, question or rant...</span>
+              <span className="flex-1">Share a confession, question or picture...</span>
               <Pencil className="h-4 w-4" />
             </button>
           ) : (
@@ -245,20 +296,56 @@ export default function FeedPage() {
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Tell everyone what is going on (optional)"
-                rows={4}
+                rows={3}
                 maxLength={2000}
                 className="w-full resize-none rounded-xl border border-white/10 bg-gray-950/80 px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-indigo-400/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
               />
 
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="text-xs text-gray-500">
-                  Posting as <span className="font-semibold text-gray-300">{me?.username}</span>.
-                  Nobody knows it is you.
-                </span>
+              {/* NEW: Image Preview Area */}
+              {imagePreview && (
+                <div className="relative inline-block mt-1">
+                  <img src={imagePreview} alt="Preview" className="h-32 w-auto rounded-lg object-cover border border-white/10" />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute -top-2 -right-2 rounded-full bg-gray-800 p-1 text-gray-300 hover:text-white hover:bg-red-500 transition-colors border border-white/20"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <div className="flex items-center gap-3">
+                  <span className="hidden sm:inline text-xs text-gray-500">
+                    Posting as <span className="font-semibold text-gray-300">{me?.username}</span>
+                  </span>
+                  
+                  {/* NEW: Hidden file input and custom Image Upload Button */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/10 transition-colors border border-indigo-500/30"
+                  >
+                    <ImagePlus className="h-4 w-4" />
+                    Add Image
+                  </button>
+                </div>
+
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setComposerOpen(false)}
+                    onClick={() => {
+                      setComposerOpen(false);
+                      removeImage();
+                    }}
                     className="rounded-full px-4 py-2 text-sm font-medium text-gray-400 hover:bg-white/5"
                   >
                     Cancel
