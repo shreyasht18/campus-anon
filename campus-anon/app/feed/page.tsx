@@ -52,9 +52,9 @@ export default function FeedPage() {
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Set your master admin username here
-  const ADMIN_USERNAME = "Ambit_admin_99"; 
-  const isAdmin = me?.username === ADMIN_USERNAME;
+  // The new admin username is set to ghostadmin. 
+  // .toLowerCase() means GhostAdmin, GHOSTADMIN, or ghostadmin will all work.
+  const isAdmin = me?.username?.toLowerCase() === "ghostadmin";
 
   const loadFeed = async () => {
     const { data, error } = await supabase

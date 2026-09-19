@@ -86,7 +86,7 @@ export default function PostCard({ post, myVote, meId, isAdmin, onVote, onDelete
           {copied ? "Copied" : "Share"}
         </button>
 
-        {/* Delete button is now visible if it is your post OR if you are the admin */}
+        {/* Admin and Author Delete Check */}
         {(isMine || isAdmin) && (
           <button
             type="button"
