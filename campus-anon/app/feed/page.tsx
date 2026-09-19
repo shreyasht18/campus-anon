@@ -50,16 +50,19 @@ export default function FeedPage() {
 
   const [composerOpen, setComposerOpen] = useState(false);
   const [flair, setFlair] = useState("Confession");
+  const [dept, setDept] = useState(""); // NEW: Stores secondary department flair
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // NEW: Image Upload States
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = me?.username?.toLowerCase() === "ghostadmin";
+
+  // Helper to check if the selected flair is a Year
+  const isYearFlair = ["1st Year", "2nd Year", "3rd Year", "4th Year"].includes(flair);
 
   const loadFeed = async () => {
     const { data, error } = await supabase
@@ -134,7 +137,6 @@ export default function FeedPage() {
     setPosts((ps) => ps.filter((p) => p.id !== post.id));
   };
 
-  // NEW: Image handlers
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -157,12 +159,12 @@ export default function FeedPage() {
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !me) return;
+    if (isYearFlair && !dept) return; // Hard block if dept isn't picked
 
     setSubmitting(true);
     setErrorMessage("");
     let finalImageUrl = null;
 
-    // NEW: Upload image to storage bucket if one was selected
     if (imageFile) {
       const fileExt = imageFile.name.split(".").pop();
       const fileName = `${Math.random()}.${fileExt}`;
@@ -185,13 +187,16 @@ export default function FeedPage() {
       finalImageUrl = publicUrlData.publicUrl;
     }
 
+    // Combine year and dept flairs if needed
+    const finalFlair = isYearFlair ? `${flair} • ${dept}` : flair;
+
     const { error } = await supabase.from("posts").insert([
       {
         title: title.trim(),
         content: body.trim(),
-        flair,
+        flair: finalFlair,
         author_name: me.username,
-        image_url: finalImageUrl, // Save the image link to the database
+        image_url: finalImageUrl,
       },
     ]);
 
@@ -201,7 +206,8 @@ export default function FeedPage() {
       setTitle("");
       setBody("");
       setFlair("Confession");
-      removeImage(); // Clear image preview after successful post
+      setDept("");
+      removeImage();
       setComposerOpen(false);
       setSort("new");
       await loadFeed();
@@ -212,7 +218,8 @@ export default function FeedPage() {
   const visiblePosts = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = posts.filter((p) => {
-      if (flairFilter !== "All" && (p.flair || "Confession") !== flairFilter) return false;
+      // Changed to .includes() so combined flairs like "1st Year • CSE Dept" show up for both filters
+      if (flairFilter !== "All" && !(p.flair || "Confession").includes(flairFilter)) return false;
       if (!q) return true;
       return (
         (p.title || "").toLowerCase().includes(q) ||
@@ -269,7 +276,10 @@ export default function FeedPage() {
                   <button
                     key={f.name}
                     type="button"
-                    onClick={() => setFlair(f.name)}
+                    onClick={() => {
+                      setFlair(f.name);
+                      setDept(""); // Reset dept selection if main flair changes
+                    }}
                     className={
                       chipBase +
                       " " +
@@ -282,6 +292,34 @@ export default function FeedPage() {
                   </button>
                 ))}
               </div>
+
+              {/* NEW: Conditional Department Selection Box */}
+              {isYearFlair && (
+                <div className="mt-2 rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-3">
+                  <p className="mb-2 text-xs font-semibold text-indigo-300">Select your department to post:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {["CSE Dept", "ECE Dept", "AIML Dept"].map((dName) => {
+                      const dFlair = FLAIRS.find((f) => f.name === dName);
+                      return (
+                        <button
+                          key={dName}
+                          type="button"
+                          onClick={() => setDept(dName)}
+                          className={
+                            chipBase +
+                            " " +
+                            (dept === dName
+                              ? dFlair?.style
+                              : "text-gray-400 ring-white/10 hover:bg-white/5")
+                          }
+                        >
+                          {dName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <input
                 value={title}
@@ -301,7 +339,6 @@ export default function FeedPage() {
                 className="w-full resize-none rounded-xl border border-white/10 bg-gray-950/80 px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-indigo-400/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
               />
 
-              {/* NEW: Image Preview Area */}
               {imagePreview && (
                 <div className="relative inline-block mt-1">
                   <img src={imagePreview} alt="Preview" className="h-32 w-auto rounded-lg object-cover border border-white/10" />
@@ -321,7 +358,6 @@ export default function FeedPage() {
                     Posting as <span className="font-semibold text-gray-300">{me?.username}</span>
                   </span>
                   
-                  {/* NEW: Hidden file input and custom Image Upload Button */}
                   <input
                     type="file"
                     accept="image/*"
@@ -344,6 +380,7 @@ export default function FeedPage() {
                     type="button"
                     onClick={() => {
                       setComposerOpen(false);
+                      setDept("");
                       removeImage();
                     }}
                     className="rounded-full px-4 py-2 text-sm font-medium text-gray-400 hover:bg-white/5"
@@ -352,7 +389,8 @@ export default function FeedPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting || !title.trim()}
+                    // NEW: Disable button if title is missing, or if Year is selected but Dept is not
+                    disabled={submitting || !title.trim() || (isYearFlair && !dept)}
                     className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg,#6366f1,#d946ef)" }}
                   >
