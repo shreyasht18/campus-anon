@@ -1,104 +1,116 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { MessageSquare, Share2, Trash2, Check } from "lucide-react";
-import { flairStyle, timeAgo } from "../lib/utils";
-import type { Post } from "../lib/utils";
-import VoteButtons from "./VoteButtons";
+import { MessageSquare, Share2, Trash2, Eye } from "lucide-react";
+import Avatar from "./Avatar";
 import UserChip from "./UserChip";
+import VoteButtons from "./VoteButtons";
+import { timeAgo, flairStyle, formatCount } from "../lib/utils";
+import type { Post } from "../lib/utils";
 
 interface Props {
   post: Post;
   myVote: number;
   meId: string | null;
-  isAdmin?: boolean;
+  isAdmin: boolean;
   onVote: (post: Post, value: 1 | -1) => void;
   onDelete: (post: Post) => void;
 }
 
 export default function PostCard({ post, myVote, meId, isAdmin, onVote, onDelete }: Props) {
-  const [copied, setCopied] = useState(false);
-  const isMine = !!meId && post.user_id === meId;
-  const comments = post.comment_count || 0;
-
-  const share = async () => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      // clipboard not available, ignore
-    }
-  };
-
-  const pill =
-    "inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/10";
+  const isMine = meId === post.user_id;
 
   return (
-    <article className="rounded-2xl border border-white/5 bg-gray-900/70 p-4 transition-colors hover:border-white/15 sm:p-5">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <UserChip userId={post.user_id} name={post.author_name} meId={meId} />
-        <span
-          className={
-            "rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset " +
-            flairStyle(post.flair)
-          }
-        >
-          {post.flair || "Confession"}
-        </span>
-        <span className="text-xs text-gray-500">{timeAgo(post.created_at)}</span>
+    <div className="rounded-2xl border border-white/5 bg-gray-900/70 p-4 transition-colors hover:border-white/10 sm:p-5">
+      <div className="flex items-center gap-3">
+        <Avatar name={post.author_name} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <UserChip name={post.author_name} userId={post.user_id} meId={meId} />
+            {post.flair && (
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset ${flairStyle(post.flair)}`}>
+                {post.flair}
+              </span>
+            )}
+            <span className="truncate text-xs text-gray-500">{timeAgo(post.created_at)}</span>
+          </div>
+        </div>
       </div>
 
       <Link href={`/post/${post.id}`} className="group mt-3 block">
-        {post.title ? (
-          <>
-            <h2 className="text-lg font-semibold leading-snug text-white transition-colors group-hover:text-indigo-300">
-              {post.title}
-            </h2>
-            {post.content && (
-              <p className="mt-2 line-clamp-4 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-400">
-                {post.content}
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="line-clamp-6 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-gray-200 transition-colors group-hover:text-white">
+        {post.title && (
+          <h2 className="text-base font-semibold text-gray-200 group-hover:text-white sm:text-lg">
+            {post.title}
+          </h2>
+        )}
+        {post.content && (
+          <p className="mt-1.5 whitespace-pre-wrap text-sm text-gray-400 group-hover:text-gray-300">
             {post.content}
           </p>
         )}
+
+        {/* THIS IS THE BLOCK THAT RENDERS YOUR IMAGE */}
+        {post.image_url && (
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-gray-950/50">
+            <img
+              src={post.image_url}
+              alt="Post attachment"
+              className="max-h-[500px] w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        )}
       </Link>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-4">
         <VoteButtons
           score={post.upvotes || 0}
           myVote={myVote}
-          onVote={(value) => onVote(post, value)}
+          onVote={(val) => onVote(post, val)}
         />
 
-        <Link href={`/post/${post.id}`} className={pill}>
+        <Link
+          href={`/post/${post.id}`}
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-white/5 hover:text-gray-200"
+        >
           <MessageSquare className="h-4 w-4" />
-          {comments} {comments === 1 ? "comment" : "comments"}
+          <span>{formatCount(post.comment_count || 0)} comments</span>
         </Link>
 
-        <button type="button" onClick={share} className={pill}>
-          {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Share2 className="h-4 w-4" />}
-          {copied ? "Copied" : "Share"}
+        {/* EYE ICON FOR VIEWS */}
+        <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-500">
+          <Eye className="h-4 w-4" />
+          <span>{formatCount(post.views || 0)} views</span>
+        </div>
+
+        <button
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({
+                title: post.title || 'Campus Anon',
+                url: `${window.location.origin}/post/${post.id}`
+              });
+            } else {
+              navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
+              alert('Link copied!');
+            }
+          }}
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-white/5 hover:text-gray-200"
+        >
+          <Share2 className="h-4 w-4" />
+          <span className="hidden sm:inline">Share</span>
         </button>
 
-        {/* Admin and Author Delete Check */}
-        {(isMine || isAdmin) && (
-          <button
-            type="button"
-            onClick={() => onDelete(post)}
-            aria-label="Delete post"
-            className="ml-auto flex items-center gap-1.5 rounded-full p-2 text-gray-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
-          >
-            <Trash2 className="h-4 w-4" /> 
-            {isAdmin && !isMine && <span className="text-xs font-bold pr-1">Admin Delete</span>}
-          </button>
-        )}
+        <div className="ml-auto">
+          {(isMine || isAdmin) && (
+            <button
+              onClick={() => onDelete(post)}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/10"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">{isAdmin && !isMine ? 'Admin Delete' : 'Delete'}</span>
+            </button>
+          )}
+        </div>
       </div>
-    </article>
+    </div>
   );
 }
