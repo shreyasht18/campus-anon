@@ -12,6 +12,15 @@ export interface Post {
   views?: number; 
 }
 
+export interface CommentRow {
+  id: string;
+  created_at: string;
+  content: string;
+  author_name: string;
+  user_id: string;
+  post_id: string;
+}
+
 export const FLAIRS = [
   { name: "Confession", style: "bg-purple-500/10 text-purple-400 ring-purple-500/20" },
   { name: "Question", style: "bg-blue-500/10 text-blue-400 ring-blue-500/20" },
@@ -68,4 +77,9 @@ export function formatCount(num: number) {
     return (num / 1000).toFixed(1) + "k";
   }
   return num.toString();
+}
+
+export function isUuid(str: string) {
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return regex.test(str);
 }
