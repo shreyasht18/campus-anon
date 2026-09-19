@@ -19,6 +19,17 @@ export interface CommentRow {
   author_name: string;
   user_id: string;
   post_id: string;
+  parent_id?: string | null;
+  score?: number;
+}
+
+export interface Message {
+  id: string;
+  created_at: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  read_at?: string | null;
 }
 
 export const FLAIRS = [
