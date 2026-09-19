@@ -1,69 +1,45 @@
-import Image from "next/image";
+import Link from "next/link";
+import { MessageSquare, Shield, Zap } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+      <div className="inline-block px-3 py-1 mb-6 text-xs font-medium text-blue-400 bg-blue-900/30 rounded-full border border-blue-800/50">
+        Currently exclusive to AMBIT students
+      </div>
+      
+      <h1 className="text-5xl font-extrabold tracking-tight mb-6 max-w-3xl mx-auto">
+        Your Campus, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Unfiltered.</span>
+      </h1>
+      
+      <p className="text-lg text-gray-400 mb-10 max-w-2xl mx-auto">
+        The private, anonymous network to share confessions, ask questions, and discuss college life without exposing your real identity. 
+      </p>
+
+      <Link 
+        href="/login" 
+        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold text-lg transition-all shadow-lg shadow-blue-900/20"
+      >
+        Enter the Network
+      </Link>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 text-left w-full max-w-5xl mx-auto">
+        <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
+          <Shield className="w-8 h-8 text-blue-500 mb-4" />
+          <h3 className="font-bold text-xl mb-2">100% Anonymous</h3>
+          <p className="text-gray-400 text-sm">Get a random username. Your real identity is never shown publicly.</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
+          <MessageSquare className="w-8 h-8 text-blue-500 mb-4" />
+          <h3 className="font-bold text-xl mb-2">Speak Freely</h3>
+          <p className="text-gray-400 text-sm">Confessions, rants, memes, and genuine advice from your peers.</p>
         </div>
-      </main>
+        <div className="bg-gray-900 p-6 rounded-xl border border-gray-800">
+          <Zap className="w-8 h-8 text-blue-500 mb-4" />
+          <h3 className="font-bold text-xl mb-2">Exclusive Access</h3>
+          <p className="text-gray-400 text-sm">A private network dedicated strictly to your campus life.</p>
+        </div>
+      </div>
     </div>
   );
 }
