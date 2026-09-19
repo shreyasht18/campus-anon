@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation"; // <-- The magic fix for Next.js 15+
 import { supabase } from "../../../lib/supabase";
 import { castVote } from "../../../lib/votes";
 import { isUuid, timeAgo } from "../../../lib/utils";
@@ -11,8 +12,11 @@ import UserChip from "../../../components/UserChip";
 import Link from "next/link";
 import { ArrowLeft, Send } from "lucide-react";
 
-export default function PostPage({ params }: { params: { id: string } }) {
-  const postId = params.id;
+export default function PostPage() {
+  // Use the hook instead of component props to get the URL ID
+  const params = useParams();
+  const postId = params?.id as string;
+
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -22,37 +26,42 @@ export default function PostPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for the router to inject the ID before checking
+    if (!postId) return;
+
     if (!isUuid(postId)) {
+      console.error("Invalid post ID format:", postId);
       setLoading(false);
       return;
     }
 
     async function fetchEverything() {
-      // 1. Trigger the view counter
       try {
         await supabase.rpc('increment_view', { post_id: postId });
       } catch (error) {
         console.error("View count error:", error);
       }
 
-      // 2. Get Logged In User
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setMeId(session.user.id);
         setIsAdmin(session.user.email === 'admin@ambit.edu');
       }
 
-      // 3. Fetch the Post
-      const { data: postData } = await supabase
+      // Added error logging just in case something else is blocking it
+      const { data: postData, error: postError } = await supabase
         .from("posts")
         .select("*")
         .eq("id", postId)
         .single();
       
+      if (postError) {
+        console.error("Supabase fetch error:", postError.message);
+      }
+      
       if (postData) {
         setPost(postData);
         
-        // 4. Fetch Your Vote Status (FIXED to use "post_votes")
         if (session) {
           const { data: voteData } = await supabase
             .from("post_votes")
@@ -64,7 +73,6 @@ export default function PostPage({ params }: { params: { id: string } }) {
         }
       }
 
-      // 5. Fetch Comments
       const { data: commentsData } = await supabase
         .from("comments")
         .select("*")
@@ -79,18 +87,15 @@ export default function PostPage({ params }: { params: { id: string } }) {
     fetchEverything();
   }, [postId]);
 
-  // FIXED: Now passing all 5 required arguments to castVote
   const handleVote = async (postToVote: Post, value: 1 | -1) => {
     if (!meId) return alert("Log in to vote!");
     
     const newVal = myVote === value ? 0 : value;
     const voteDiff = newVal - myVote;
     
-    // Update UI instantly
     setMyVote(newVal);
     setPost(prev => prev ? { ...prev, upvotes: (prev.upvotes || 0) + voteDiff } : null);
     
-    // Call the server with all 5 arguments
     await castVote("post_votes", "post_id", postToVote.id, myVote, value);
   };
 
