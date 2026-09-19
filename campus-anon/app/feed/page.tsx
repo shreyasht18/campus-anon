@@ -53,7 +53,7 @@ export default function FeedPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Set your master admin username here
-  const ADMIN_USERNAME = "Ambit_Admin_99"; 
+  const ADMIN_USERNAME = "Ambit_admin_99"; 
   const isAdmin = me?.username === ADMIN_USERNAME;
 
   const loadFeed = async () => {
