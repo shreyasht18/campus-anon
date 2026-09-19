@@ -27,7 +27,7 @@ export interface Message {
   id: string;
   created_at: string;
   sender_id: string;
-  receiver_id: string;
+  recipient_id: string; 
   content: string;
   read_at?: string | null;
 }
